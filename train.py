@@ -8,7 +8,7 @@ import wandb
 def main(args):
     wandb.login()
     
-    setSeeds(42)
+    setSeeds(args.seed)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     args.device = device
 
@@ -22,7 +22,7 @@ def main(args):
     
     train_data, valid_data = preprocess.split_data(train_data)
     
-    wandb.init(project='dkt', config=vars(args))
+    wandb.init(project='P4-DKT', entity='team-ikyo', name=args.run_name)
     trainer.run(args, train_data, valid_data)
     
 
