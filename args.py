@@ -7,6 +7,7 @@ def parse_args(mode='train'):
 
     
     parser.add_argument('--seed', default=42, type=int, help='seed')
+    parser.add_argument('--run_name', default='teamikyo', type=str, help='wandb run name')
     
     parser.add_argument('--device', default='cpu', type=str, help='cpu or gpu')
 
