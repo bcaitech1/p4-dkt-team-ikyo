@@ -14,7 +14,8 @@ def find_time_difference(data):
         return 0
 
     
-def feature_engineering_sun(df):    
+
+def feature_engineering_sun(df):
     # user별 timestamp 기준 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
