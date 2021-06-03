@@ -14,28 +14,7 @@ def find_time_difference(data):
         return 0
 
     
-def feature_engineering_sun(df):
-    # assessmentItemID, timestamp 기준 정렬
-    df.sort_values(by=["assessmentItemID", "Timestamp"], inplace=True)
-    
-    # assessmentItemID 풀이 수, 정답 수, 정답률을 시간순으로 누적해서 계산
-    df["question_correct_answer"] = df.groupby("assessmentItemID")["answerCode"].transform(lambda x: x.cumsum().shift(1))
-    df["question_total_answer"] = df.groupby("assessmentItemID")["answerCode"].cumcount()
-    df["question_acc"] = df["question_correct_answer"] / df["question_total_answer"]
-    
-    # question class
-    df["question_class"] = df["assessmentItemID"].apply(lambda x: x[2])
-    # user_question_class
-    df["userID_question_class"] = df[["userID", "question_class"]].apply(lambda data: str(data["userID"]) + "_" + data["question_class"], axis=1)
-    
-    # assessmentItemID, timestamp 기준 정렬
-    df.sort_values(by=["userID_question_class", "Timestamp"], inplace=True)
-    
-    # userID_question_class 풀이 수, 정답 수, 정답률을 시간순으로 누적해서 계산
-    df["user_question_class_correct_answer"] = df.groupby("userID_question_class")["answerCode"].transform(lambda x: x.cumsum().shift(1))
-    df["user_question_class_total_answer"] = df.groupby("userID_question_class")["answerCode"].cumcount()
-    df["user_question_class_acc"] = df["user_question_class_correct_answer"] / df["user_question_class_total_answer"]
-    
+def feature_engineering_sun(df):    
     # user별 timestamp 기준 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
