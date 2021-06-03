@@ -5,6 +5,7 @@ import warnings
 import lightgbm as lgb
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import accuracy_score
+from feature_engineering import feature_engineering
 import numpy as np
 import random
 from matplotlib import pylab as plt
@@ -20,17 +21,19 @@ def set_params():
     params["learning_rate"] = 1e-1 # 1e-1, 5e-2, 1e-2, 5e-3, 1e-3
     params["objective"] = "binary"
     params["metric"] = "auc" # binary_logloss, rmse, huber, auc
-    params["num_iterations"] = 1500 # 100
+    params["num_iterations"] = 300 # 100
     params["max_depth"] = 6 # -1
-    params["num_leaves"] = 40 # 31 이상적으로 num_leaves값은 2 ^ (max_depth) 값보다 적거나 같아야 합니다.
-    params["min_data_in_leaf"] = 1000 # 20 100 ~ 1000 수백 또는 수천 개로 정하는 것
-    params["max_bin"] = 128 # 256
+    params["num_leaves"] = 30 # 31 이상적으로 num_leaves값은 2 ^ (max_depth) 값보다 적거나 같아야 합니다.
+    params["min_data_in_leaf"] = 5000 # 20 100 ~ 1000 수백 또는 수천 개로 정하는 것
+    params["max_bin"] = 32 # 256
     params["scale_pos_weight"] = 1.1 # 1.1~1.5 data 불균형
     params["tree_learner"] = "serial" # serial, feature, data, voting
     params["early_stopping_rounds"] = 100
-    params["bagging_fraction"] = 0.9 # 1.0
+    params["bagging_fraction"] = 0.8 # 1.0
+    params["feature_fraction"] = 0.5 # 1.0
     params["lambda_l1"] = 1e-1 # 0.0
     params["lambda_l2"] = 1e-1 # 0.0
+    
     
     print("="*30)
     print(params)
@@ -74,7 +77,7 @@ def custom_train_test_split(df, ratio=0.2):
     return train_lst, test_lst
 
 
-def inference(FEATS, model, auc, acc):
+def inference(FEATS, model, auc, acc, time):
     print("="*30)
     print("Start inference")
     print("="*30)
@@ -94,7 +97,6 @@ def inference(FEATS, model, auc, acc):
     print("="*30)
     print()
     
-    
     test_df = pd.concat([df, test_df])
 
     not_test_df = test_df[test_df["answerCode"] != -1]
@@ -113,21 +115,17 @@ def inference(FEATS, model, auc, acc):
     
     test_df = pd.merge(test_df, not_test_df[["userID", "user_mean"]].drop_duplicates(), on=["userID"], how="inner")
     test_df = pd.merge(test_df, not_test_df[["question_class", "question_class_mean"]].drop_duplicates(), on=["question_class"], how="inner")
-#     print(test_df.shape)
     
     def random_answering(data):
-        return 1 if random.random() + random.random() < data["user_mean"] + data["question_class_mean"] else 0
+        return 1 if random.random() < data["user_mean"] * data["question_class_mean"] else 0
 
     test_df["answerCode"] = test_df[["user_mean", "question_class_mean"]].apply(random_answering, axis=1)
     test_df.drop(["question_class", "user_mean", "question_class_mean"], axis=1, inplace=True)
-#     print(test_df.shape)
     
     data = pd.concat([not_test_df, test_df], join="inner")
-#     print(data.shape)
 
     # FEATURE ENGINEERING
     data = feature_engineering(data)
-#     print(data.shape)
 
     # TEST DATA
     test_df = data[data["is_test"]]
@@ -137,7 +135,6 @@ def inference(FEATS, model, auc, acc):
     print(test_df.shape)
     print("="*30)
     print()
-#     print(test_df.shape) # (744, 21)
 
     # DROP ANSWERCODE
     test_df = test_df.drop(["answerCode"], axis=1)
@@ -147,7 +144,7 @@ def inference(FEATS, model, auc, acc):
     
     # SAVE OUTPUT
     output_dir = 'output/'
-    write_path = os.path.join(output_dir, f"output_VALID_AUC_{round(auc, 4)}_ACC_{round(acc, 4)}.csv")
+    write_path = os.path.join(output_dir, f"output_{time}_AUC_{round(auc, 4)}_ACC_{round(acc, 4)}.csv")
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)    
     with open(write_path, 'w', encoding='utf8') as w:
