@@ -56,10 +56,13 @@ def feature_engineering_sun(df):
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
     # user 문제 푼 시간 측정
-    df["next_timestamp"] = df["Timestamp"].shift(1)
-    df["userID_shift"] = df["userID"].shift(1)
-#     # user별 시간 차이 계산
-#     df["time_difference"] = df[["userID", "userID_shift", "Timestamp", "next_timestamp"]].apply(find_time_difference, axis=1)
+    df["next_timestamp"] = df["Timestamp"].shift(-1)
+    df["userID_shift"] = df["userID"].shift(-1)
+    # 3min 25s 소요..
+    df["time_difference"] = df[["userID", "userID_shift", "Timestamp", "next_timestamp"]].apply(find_time_difference, axis=1)
+    
+    # question class
+    df["question_class"] = df["assessmentItemID"].apply(lambda x: x[2])
     
     # user의 문제 풀이 수, 정답 수, 정답률을 시간순으로 누적해서 계산
     df["user_correct_answer"] = df.groupby("userID")["answercode"].transform(lambda x: x.cumsum().shift(1))
