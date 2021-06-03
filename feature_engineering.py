@@ -14,7 +14,7 @@ def find_time_difference(data):
         return 0
 
     
-def feature_engineering(df):
+def feature_engineering_sun(df):
     # assessmentItemID, timestamp 기준 정렬
     df.sort_values(by=["assessmentItemID", "Timestamp"], inplace=True)
     
