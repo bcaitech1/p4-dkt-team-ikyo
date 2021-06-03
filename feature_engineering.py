@@ -4,7 +4,7 @@ import numpy as np
 
 def find_time_difference(data):
     if data["userID"] == data["userID_shift"]:
-        temp_time_difference = int(((data["Timestamp"] - data["next_timestamp"]) / pd.to_timedelta(1, unit='D')) * (60 * 60 * 24))
+        temp_time_difference = int(((data["next_timestamp"] - data["Timestamp"]) / pd.to_timedelta(1, unit='D')) * (60 * 60 * 24))
         if temp_time_difference > 3600: # 1시간 넘는 경우 # 변경 가능
             return 3600
         else:
@@ -18,8 +18,8 @@ def feature_engineering_sun(df):
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
     # user 문제 푼 시간 측정
-    df["next_timestamp"] = df["Timestamp"].shift(1)
-    df["userID_shift"] = df["userID"].shift(1)
+    df["next_timestamp"] = df["Timestamp"].shift(-1)
+    df["userID_shift"] = df["userID"].shift(-1)
     # 3min 25s 소요..
     df["time_difference"] = df[["userID", "userID_shift", "Timestamp", "next_timestamp"]].apply(find_time_difference, axis=1)
     
