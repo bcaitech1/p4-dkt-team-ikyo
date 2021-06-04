@@ -21,6 +21,20 @@ def main(args):
     train_data = preprocess.get_train_data()
     train_data, valid_data = preprocess.split_data(train_data)
     
+    is_augment = True
+    if is_augment:
+        augment_data = []
+        for data in valid_data:
+            augment_data.append(data[:,:-1])
+
+        preprocess.load_test_data(args.test_file_name)
+        test_data = preprocess.get_test_data()
+
+        for data in test_data:
+            augment_data.append(data[:,:-1])
+
+        train_data = train_data.tolist() + augment_data
+    
     train_data = preprocess.augment_data(train_data)
     print('Data preprocessing finish !!')
     print(f'\t >>> elapsed time {((time.time()-start_time)/60):.2f} min')
