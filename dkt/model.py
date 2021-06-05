@@ -23,17 +23,6 @@ class Bert(nn.Module):
         self.hidden_dim = self.args.hidden_dim
         self.n_layers = self.args.n_layers
 
-        # Embedding 
-        # interaction은 현재 correct으로 구성되어있다. correct(1, 2) + padding(0)
-        self.embedding_test = nn.Embedding(self.args.n_test, self.hidden_dim//3)
-        self.embedding_question = nn.Embedding(self.args.n_questions, self.hidden_dim//3)
-        self.embedding_tag = nn.Embedding(self.args.n_tag, self.hidden_dim//3)
-        self.embedding_timediff = nn.Embedding(3, self.hidden_dim//3)
-        self.embedding_qclass = nn.Embedding(self.args.n_class, self.hidden_dim//3)
-        self.embedding_interaction = nn.Embedding(3, self.hidden_dim//3)
-        
-        self.emb_drop_out = nn.Dropout(0.2)
-        
         # mask model
         self.mask_model = MaskModel(self.args)
         
@@ -59,22 +48,9 @@ class Bert(nn.Module):
         
         batch_size = len(interaction)
         
-        # 신나는 embedding
-        embed_last_test = self.embedding_test(last_test)
-        embed_last_question = self.embedding_question(last_question)
-        embed_last_tag = self.embedding_tag(last_tag)
-        embed_last_qclass = self.embedding_qclass(last_qclass)
-        
-        embed_test = self.embedding_test(test[:,:-1])
-        embed_question = self.embedding_question(question[:,:-1])
-        embed_tag = self.embedding_tag(tag[:,:-1])
-        embed_qclass = self.embedding_qclass(qclass[:,:-1])
-        embed_timediff = self.embedding_timediff(time_diff[:,:-1])
-        embed_interaction = self.embedding_interaction(interaction[:,1:])
-        
-        embed_mask = self.mask_model((embed_last_test, embed_last_question, embed_last_tag, embed_last_qclass))
+        embed_mask = self.mask_model((last_test, last_question, last_tag, last_qclass))
         nonseq_bert_out = self.nonseq_model((testid_exp, assessmentItemID_exp, cont_feature))
-        seq_bert_out = self.seq_model((embed_test, embed_question, embed_tag, embed_qclass, embed_timediff, embed_interaction, mask))
+        seq_bert_out = self.seq_model((test, question, tag, qclass, time_diff, interaction, mask))
         
         out = torch.cat([seq_bert_out, nonseq_bert_out], 1) # B, emb*6
         out = self.batch_norm_comb(out)
@@ -94,21 +70,36 @@ class MaskModel(nn.Module):
         super(MaskModel, self).__init__()
         self.args = args
         self.device = args.device
+        self.dr_rate = args.drop_out
 
         # Defining some parameters
         self.hidden_dim = self.args.hidden_dim
+        self.n_layers = self.args.n_layers
 
+        # Embedding 
+        self.embedding_test = nn.Embedding(self.args.n_test, self.hidden_dim//3)
+        self.embedding_question = nn.Embedding(self.args.n_questions, self.hidden_dim//3)
+        self.embedding_tag = nn.Embedding(self.args.n_tag, self.hidden_dim//3)
+        self.embedding_qclass = nn.Embedding(self.args.n_class, self.hidden_dim//3)
+        
+        self.emb_drop_out = nn.Dropout(0.2)
+        
         # embedding combination projection
         self.batch_norm_mask = nn.BatchNorm1d((self.hidden_dim//3)*4)
         self._mask_comb_proj = nn.utils.weight_norm(nn.Linear((self.hidden_dim//3)*4, self.hidden_dim))
         
-        self.emb_drop_out = nn.Dropout(0.2)
         self.activation = nn.Sigmoid()
     
     def forward(self, input):
-        embed_last_test, embed_last_question, embed_last_tag, embed_last_qclass = input
+        last_test, last_question, last_tag, last_qclass = input
         
-        batch_size = len(embed_last_test)
+        batch_size = len(last_test)
+        
+        # 신나는 embedding
+        embed_last_test = self.embedding_test(last_test)
+        embed_last_question = self.embedding_question(last_question)
+        embed_last_tag = self.embedding_tag(last_tag)
+        embed_last_qclass = self.embedding_qclass(last_qclass)
         
         # embedding combination projection 
         embed_mask_ = torch.cat([embed_last_test,
@@ -227,12 +218,12 @@ class SeqModel(nn.Module):
         self.embedding_qclass = nn.Embedding(self.args.n_class, self.hidden_dim//3)
         self.embedding_interaction = nn.Embedding(3, self.hidden_dim//3)
         
+        self.emb_drop_out = nn.Dropout(0.2)
+        
         # embedding combination projection
         self.batch_norm_seq = nn.BatchNorm1d(self.args.max_seq_len-1)
         self._seq_comb_proj = nn.utils.weight_norm(nn.Linear((self.hidden_dim//3)*6, self.hidden_dim))
-        
-        self.emb_drop_out = nn.Dropout(0.2)
-        
+                
         # Bert config
         self.seq_config = BertConfig( 
             3, # not used
@@ -250,9 +241,17 @@ class SeqModel(nn.Module):
         self.act = nn.Tanh()
     
     def forward(self, input):
-        embed_test, embed_question, embed_tag, embed_qclass, embed_timediff, embed_interaction, mask = input
+        test, question, tag, qclass, time_diff, interaction, mask = input
         
-        batch_size = len(embed_test)
+        batch_size = len(test)
+        
+        # 신나는 embedding
+        embed_test = self.embedding_test(test[:,:-1])
+        embed_question = self.embedding_question(question[:,:-1])
+        embed_tag = self.embedding_tag(tag[:,:-1])
+        embed_qclass = self.embedding_qclass(qclass[:,:-1])
+        embed_timediff = self.embedding_timediff(time_diff[:,:-1])
+        embed_interaction = self.embedding_interaction(interaction[:,1:])
         
         # embedding combination projection 
         embed_seq_ = torch.cat([embed_test,
@@ -273,7 +272,7 @@ class SeqModel(nn.Module):
         seq_bert_out = seq_bert_out[:, -1].squeeze() # B, emb
         return seq_bert_out
 
-####################################################### 안 씀 #########################################################
+###################################################### 안 씀 #####################################################
 
 class CausalConvModel(nn.Module):
 
