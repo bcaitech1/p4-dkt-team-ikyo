@@ -80,7 +80,7 @@ def train(train_loader, model, optimizer, args, epoch, last_whole_y_t, last_whol
     for step, batch in enumerate(train_loader):
         input = process_batch(batch, args)
         preds = model(input)
-        targets = input[-3][:,-1:] # correct
+        targets = input[-4].view(-1, 1) # correct
 
         if args.loss == 'bce':
             loss = compute_loss(preds, targets)
@@ -128,7 +128,7 @@ def validate(valid_loader, model, args):
         input = process_batch(batch, args)
 
         preds = model(input)
-        targets = input[-3][:,-1:] # correct
+        targets = input[-4].view(-1, 1) # correct
 
         # predictions
         preds = preds[:,-1]
@@ -192,9 +192,7 @@ def get_model(args):
     """
     Load model and move tensors to a given devices.
     """
-    if args.model == 'lstm': model = LSTM(args)
-    elif args.model == 'lstmattn': model = LSTMATTN(args)
-    elif args.model == 'bert': model = Bert(args)
+    if args.model == 'simple': model = SimpleModel(args)
     else:
         raise NameError('model name error') 
     
@@ -206,54 +204,19 @@ def get_model(args):
 # 배치 전처리
 def process_batch(batch, args):
 
-    last_test, last_question, last_tag, last_qclass, testid_exp, assessmentItemID_exp, cont_feature, test, question, tag, correct, time_diff, qclass, mask = batch
+    tag_total_solving_num, tag_total_solving_rate, class_total_solving_num, class_solving_rate, correct, question, tag, qclass = batch
     
-    # change to float
-    mask = mask.type(torch.FloatTensor)
-    correct = correct.type(torch.FloatTensor)
+    tag_total_solving_num   = tag_total_solving_num.to(torch.float32).to(args.device)
+    tag_total_solving_rate  = tag_total_solving_rate.to(torch.float32).to(args.device)
+    class_total_solving_num = class_total_solving_num.to(torch.float32).to(args.device)
+    class_solving_rate      = class_solving_rate.to(torch.float32).to(args.device)
     
-    # interaction을 임시적으로 correct를 한칸 우측으로 이동한 것으로 사용
-    interaction = correct + 1 # 패딩을 위해 correct값에 1을 더해준다.
-    interaction = interaction.roll(shifts=1, dims=1)
-    interaction_mask = mask.roll(shifts=1, dims=1)
-    interaction_mask[:, 0] = 0
-    interaction = (interaction * interaction_mask).to(torch.int64)
+    correct  = correct.type(torch.FloatTensor).to(args.device)
+    question = question.to(torch.int64).to(args.device)
+    tag      = tag.to(torch.int64).to(args.device)
+    qclass   = qclass.to(torch.int64).to(args.device)
     
-    #  test_id, question_id, tag
-#     test = ((test + 1) * mask).to(torch.int64)
-#     question = ((question + 1) * mask).to(torch.int64)
-#     tag = ((tag + 1) * mask).to(torch.int64)
-    
-    test = (test * mask).to(torch.int64)
-    question = (question * mask).to(torch.int64)
-    tag = (tag * mask).to(torch.int64)
-    time_diff = (time_diff * mask).to(torch.int64)
-    qclass = (qclass * mask).to(torch.int64)
-    
-    # device memory로 이동
-    last_test = last_test.to(torch.int64).to(args.device)
-    last_question = last_question.to(torch.int64).to(args.device)
-    last_tag = last_tag.to(torch.int64).to(args.device)
-    last_qclass = last_qclass.to(torch.int64).to(args.device)
-    
-    testid_exp = testid_exp.to(torch.int64).to(args.device)
-    assessmentItemID_exp = assessmentItemID_exp.to(torch.int64).to(args.device)
-    cont_feature = cont_feature.to(torch.float32).to(args.device)
-    
-    test = test.to(args.device)
-    question = question.to(args.device)
-    tag = tag.to(args.device)
-    time_diff = time_diff.to(args.device)
-    qclass = qclass.to(args.device)
-    
-    correct = correct.to(args.device)
-    mask = mask.to(args.device)
-    interaction = interaction.to(args.device)
-    
-    return (last_test, last_question, last_tag, last_qclass,
-            testid_exp, assessmentItemID_exp, cont_feature,
-            test, question, tag, time_diff, qclass,
-            correct, mask, interaction)
+    return (tag_total_solving_num, tag_total_solving_rate, class_total_solving_num, class_solving_rate, correct, question, tag, qclass)
 
 
 # loss계산하고 parameter update!

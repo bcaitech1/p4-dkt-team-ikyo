@@ -88,21 +88,21 @@ class Preprocess:
         df['Timestamp'] = df['Timestamp'].apply(convert_time)
         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
         
-        # non sequence - categorical feature
-        df["tmp"] = df.groupby(["userID", "testId"])['testId'].cumcount()
-        df['testid_experience'] = df['tmp'].apply(lambda x : 1 if x > 0 else 0)
+#         # non sequence - categorical feature
+#         df["tmp"] = df.groupby(["userID", "testId"])['testId'].cumcount()
+#         df['testid_experience'] = df['tmp'].apply(lambda x : 1 if x > 0 else 0)
         
-        df["tmp"] = df.groupby(["userID", "assessmentItemID"])['assessmentItemID'].cumcount()
-        df['assessmentItemID_experience'] = df['tmp'].apply(lambda x : 1 if x > 0 else 0)
-        print('\t no-sequence categorical feature finish')
+#         df["tmp"] = df.groupby(["userID", "assessmentItemID"])['assessmentItemID'].cumcount()
+#         df['assessmentItemID_experience'] = df['tmp'].apply(lambda x : 1 if x > 0 else 0)
+#         print('\t no-sequence categorical feature finish')
         
         # non sequence - continuous feature
         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
-        df["user_total_answer"] = df.groupby("userID")["answerCode"].cumcount()
-        df["user_correct_answer"] = df.groupby("userID")["answerCode"].transform(lambda x: x.cumsum().shift(1))
-        df['user_correct_answer'].fillna(0, inplace=True)
-        df["user_acc"] = df["user_correct_answer"] / df["user_total_answer"]
-        df['user_acc'].fillna(0, inplace=True)
+#         df["user_total_answer"] = df.groupby("userID")["answerCode"].cumcount()
+#         df["user_correct_answer"] = df.groupby("userID")["answerCode"].transform(lambda x: x.cumsum().shift(1))
+#         df['user_correct_answer'].fillna(0, inplace=True)
+#         df["user_acc"] = df["user_correct_answer"] / df["user_total_answer"]
+#         df['user_acc'].fillna(0, inplace=True)
         
         df["tmp"] = df[["userID", "KnowledgeTag"]].apply(lambda data: str(data["userID"]) + "_" + str(data["KnowledgeTag"]), axis=1)
         df["knowledgetag_total_solving_num"] = df.groupby("tmp")["answerCode"].cumcount()
@@ -119,28 +119,28 @@ class Preprocess:
         df['question_class_solving_rate'].fillna(0, inplace=True)
         print('\t no-sequence continuous feature finish')
         
-        # sequence - categorical feature
-        df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=False)
-        df["tmp"] = df["user_total_answer"].apply(lambda x : x// self.args.max_seq_len)
+#         # sequence - categorical feature
+#         df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=False)
+#         df["tmp"] = df["user_total_answer"].apply(lambda x : x// self.args.max_seq_len)
         
-        last_seq_group = df.groupby(['userID', "tmp"])['index'].agg(["max"])
-        last_seq_group = last_seq_group.reset_index()
-        last_seq_group.columns = ['userID', 'tmp', 'last_seq']
-        df = pd.merge(df, last_seq_group, on=["userID", "tmp"], how="left")
+#         last_seq_group = df.groupby(['userID', "tmp"])['index'].agg(["max"])
+#         last_seq_group = last_seq_group.reset_index()
+#         last_seq_group.columns = ['userID', 'tmp', 'last_seq']
+#         df = pd.merge(df, last_seq_group, on=["userID", "tmp"], how="left")
         
-        def changed_time(x):
-            last_time = df['Timestamp'][x['last_seq']]
-            period = (last_time-x['Timestamp'])//(3600*24)
+#         def changed_time(x):
+#             last_time = df['Timestamp'][x['last_seq']]
+#             period = (last_time-x['Timestamp'])//(3600*24)
 
-            if period == 0:
-                return 0
-            elif period < 14:
-                return 1
-            else:
-                return 2
+#             if period == 0:
+#                 return 0
+#             elif period < 14:
+#                 return 1
+#             else:
+#                 return 2
         
-        df["new_time"] = df.apply(changed_time, axis=1)
-        print('\t sequence categorical feature finish')
+#         df["new_time"] = df.apply(changed_time, axis=1)
+#         print('\t sequence categorical feature finish')
         return df
 
     def load_data_from_file(self, file_name, is_train=True):
@@ -156,30 +156,47 @@ class Preprocess:
         self.args.n_class = len(np.load(os.path.join(self.args.asset_dir,'question_class_classes.npy')))
         
         df = df.sort_values(by=['userID','Timestamp'], axis=0)
-        columns = ['testid_experience', 'assessmentItemID_experience',
-                   'user_total_answer', 'user_correct_answer', 'user_acc',
-                   'knowledgetag_total_solving_num', 'knowledgetag_correct_solving_num', 'knowledgetag_total_solving_rate',
-                   'question_class_total_solving_num', 'question_class_correct_solving_num', 'question_class_solving_rate',
-                   'userID', 'answerCode', 'testId', 'assessmentItemID', 'KnowledgeTag', 'question_class', 'new_time']
+        columns = [
+#             'testid_experience',
+#             'assessmentItemID_experience',
+#             'user_total_answer',
+#             'user_correct_answer',
+#             'user_acc',
+            'knowledgetag_total_solving_num',
+#             'knowledgetag_correct_solving_num',
+            'knowledgetag_total_solving_rate',
+            'question_class_total_solving_num',
+#             'question_class_correct_solving_num',
+            'question_class_solving_rate',
+            'userID',
+            'answerCode',
+#             'testId',
+            'assessmentItemID',
+            'KnowledgeTag',
+            'question_class',
+#             'new_time'
+        ]
         
-        group = df[columns].groupby('userID').apply(lambda r: np.array([r['testid_experience'].values, 
-                                                                        r['assessmentItemID_experience'].values,        # 1
-                                                                        r['user_total_answer'].values,
-                                                                        r['user_correct_answer'].values,
-                                                                        r['user_acc'].values,                           # 4
+        group = df[columns].groupby('userID').apply(lambda r: np.array([
+#                                                                         r['testid_experience'].values, 
+#                                                                         r['assessmentItemID_experience'].values,        # 1
+#                                                                         r['user_total_answer'].values,
+#                                                                         r['user_correct_answer'].values,
+#                                                                         r['user_acc'].values,                           # 4
                                                                         r['knowledgetag_total_solving_num'].values,
-                                                                        r['knowledgetag_correct_solving_num'].values,
+#                                                                         r['knowledgetag_correct_solving_num'].values,
                                                                         r['knowledgetag_total_solving_rate'].values,    # 7
                                                                         r['question_class_total_solving_num'].values,
-                                                                        r['question_class_correct_solving_num'].values,
+#                                                                         r['question_class_correct_solving_num'].values,
                                                                         r['question_class_solving_rate'].values,        # 10
                                                                         
                                                                         r['answerCode'].values,                         # 11
-                                                                        r['testId'].values, 
+#                                                                         r['testId'].values, 
                                                                         r['assessmentItemID'].values,
                                                                         r['KnowledgeTag'].values,
                                                                         r['question_class'].values,
-                                                                        r['new_time'].values,]))                        # 16
+#                                                                         r['new_time'].values,                           # 16
+        ]))
         data_group = group.values
         return data_group
 
@@ -197,34 +214,28 @@ class DKTDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         row = self.data[index]
-        non_seq_row, seq_row = row[:11], row[11:]
+        non_seq_row, seq_row = row[:4], row[4:]
         
-        # 각 data의 sequence length
-        seq_len = len(seq_row[0])
+        tag_total_solving_num   = non_seq_row[0, -1]
+        tag_total_solving_rate  = non_seq_row[1, -1]
+        class_total_solving_num = non_seq_row[2, -1]
+        class_solving_rate      = non_seq_row[3, -1]
         
-        testid_exp, assessmentItemID_exp, cont_feature = non_seq_row[0, -1], non_seq_row[1, -1], non_seq_row[2:, -1]
+        correct  = seq_row[0, -1]
+        question = seq_row[1, -1]
+        tag      = seq_row[2, -1]
+        qclass   = seq_row[3, -1]
         
-        correct, test, question, tag, qclass, time_diff = seq_row
-        
-        last_test, last_question, last_tag, last_qclass = test[-1], question[-1], tag[-1], qclass[-1]
-        
-        non_seq_cols = [last_test, last_question, last_tag, last_qclass,
-                        testid_exp, assessmentItemID_exp, cont_feature]
-        seq_cols = [test, question, tag, correct, time_diff, qclass]
-        
-        # max seq len을 고려하여서 이보다 길면 자르고 아닐 경우 그대로 냅둔다
-        if seq_len > self.args.max_seq_len:
-            for i, col in enumerate(seq_cols):
-                seq_cols[i] = col[-self.args.max_seq_len:]
-            mask = np.ones(self.args.max_seq_len, dtype=np.int16)
-        else:
-            mask = np.zeros(self.args.max_seq_len, dtype=np.int16)
-            mask[-seq_len:] = 1
-        
-        # mask도 columns 목록에 포함시킴
-        seq_cols.append(mask)
-        
-        cols = non_seq_cols + seq_cols
+        cols = [
+            tag_total_solving_num,
+            tag_total_solving_rate,
+            class_total_solving_num,
+            class_solving_rate,
+            correct,
+            question,
+            tag,
+            qclass,
+        ]
         
         # np.array -> torch.tensor 형변환
         for i, col in enumerate(cols):
@@ -235,21 +246,14 @@ class DKTDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.data)
 
-non_seq_len = 7
 def collate(batch):
     col_n = len(batch[0])
     col_list = [[] for _ in range(col_n)]
-    max_seq_len = len(batch[0][-1])
         
     # batch의 값들을 각 column끼리 그룹화
     for row in batch:
         for i, col in enumerate(row):
-            if i < non_seq_len:
-                col_list[i].append(col)
-            else:
-                pre_padded = torch.zeros(max_seq_len)
-                pre_padded[-len(col):] = col
-                col_list[i].append(pre_padded)
+            col_list[i].append(col)
 
     for i, _ in enumerate(col_list):
         col_list[i] = torch.stack(col_list[i])
@@ -269,7 +273,8 @@ def get_loaders(args, train, valid):
                                                    shuffle=True,
                                                    batch_size=args.batch_size,
                                                    pin_memory=pin_memory,
-                                                   collate_fn=collate)
+                                                   collate_fn=collate,
+                                                   drop_last=True)
     if valid is not None:
         valset = DKTDataset(valid, args)
         valid_loader = torch.utils.data.DataLoader(valset,
