@@ -130,7 +130,7 @@ def userID_acc_rolling(df, window=5):
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
     # userID별 정답률(user_acc)의 이동 평균
-    df['userID_acc_rolling'] = df.groupby(['userID'])['user_acc'].rolling(window).mean().values
+    df['userID_acc_rolling'] = df.groupby(['userID'])['userID_acc'].rolling(window).mean().values
     # userID별 window-1만큼 N/A data가 생김(rolling의 특성상 앞데이터에 생김)
     # userID별 user_acc_rolling의 중앙값으로 대체
     def changed_user_acc_rolling(data):
@@ -138,33 +138,10 @@ def userID_acc_rolling(df, window=5):
     user_median = df.groupby('userID')['userID_acc_rolling'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     # 결측치 중앙값 변환 및 임시 열 삭제
-    df['userID_acc_rolling'] = df['userID_acc_rolling'].fillna('missing')
+    df = df.fillna('missing')
     df['userID_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
     df.drop('userID_acc_rolling_x', axis=1, inplace=True)
     df.drop('userID_acc_rolling_y', axis=1, inplace=True)
-    return df
-
-def user_acc_rolling(df, window=5):
-    # user_acc 있어야 이동평균 계산 가능
-    if 'user_acc' not in df.columns:
-        df = userID_relative(df)
-    # userID별 시간 순으로 정렬
-    df.sort_values(by=["userID", "Timestamp"], inplace=True)
-
-    # userID별 정답률(user_acc)의 이동 평균
-    df['user_acc_rolling'] = df.groupby(['userID'])['user_acc'].rolling(5).mean().values
-    # userID별 window-1만큼 N/A data가 생김(rolling의 특성상 앞데이터에 생김)
-    # userID별 user_acc_rolling의 중앙값으로 대체
-    def changed_user_acc_rolling(data):
-        return data["user_acc_rolling_x"] if data["user_acc_rolling_x"] != 'missing' else data["user_acc_rolling_y"]
-    user_median = df.groupby('userID')['user_acc_rolling'].median()
-    df = pd.merge(df, user_median, on=["userID"], how="left")
-
-    # 결측치 중앙값 변환 및 임시 열 삭제
-    df = df.fillna('missing')
-    df['user_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
-    df.drop('user_acc_rolling_x', axis=1, inplace=True)
-    df.drop('user_acc_rolling_y', axis=1, inplace=True)
     return df
 
 
@@ -180,7 +157,7 @@ def userID_elapsed_median_rolling(df, window=5):
     # 유저별 window-1만큼 N/A data가 생김(rolling의 특성상 앞데이터에 생김)
     # 유저별 userID_elapsed_median_rolling의 중앙값으로 대체
     def changed_mean_time(data):
-        return data["userID_elapsed_median_rollingg_x"] if data["userID_elapsed_median_rolling_x"] != 'missing' else data["userID_elapsed_median_rolling_y"]
+        return data["userID_elapsed_median_rolling_x"] if data["userID_elapsed_median_rolling_x"] != 'missing' else data["userID_elapsed_median_rolling_y"]
     user_median = df.groupby('userID')['userID_elapsed_median_rolling'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
@@ -209,13 +186,13 @@ def assessmentItemID_time_relative(df):
 
 
 def userID_time_relative(df):
-    # 문제별 풀이 시간의 중앙값&평균값
+    # 유저별 풀이 시간의 중앙값&평균값
     # userID_elapsed_median 있어야 userID_time_relative 계산 가능
     if 'userID_elapsed_median' not in df.columns:
         df = userID_elapsed_median(df)
     # assessmentItemID별 풀이 시간의 중앙값&평균값
     df_total_agg = df.copy()
-    agg_df = df_total_agg.groupby('userID')['userID_time_relative'].agg(['median', 'mean'])
+    agg_df = df_total_agg.groupby('userID')['userID_elapsed_median'].agg(['median', 'mean'])
     # mapping을 위해 pandas DataFrame을 dictionary형태로 변환
     agg_dict = agg_df.to_dict()
     # 구한 통계량을 각 사용자에게 mapping
