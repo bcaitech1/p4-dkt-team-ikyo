@@ -10,7 +10,7 @@ def userID_testid_experience(df):
     # userID별 시간 순으로 정렬
     df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
     
-    # userID, testID별로 
+    # userID 별로 testid를 풀어본 적 있는지
     df["userID_testid_experience"] = df.groupby(["userID", "testId"])['testId'].cumcount()
     df['userID_testid_experience'] = df['userID_testid_experience'].apply(lambda x : 1 if x > 0 else 0)
     return df
@@ -18,7 +18,8 @@ def userID_testid_experience(df):
 def userID_assessmentItemID_experience(df):
     # userID별 시간 순으로 정렬
     df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
-    # userID별 시간 순으로 정렬    
+    
+    # userID 별로 assessmentItemID를 풀어본 적 있는지
     df["userID_assessmentItemID_experience"] = df.groupby(["userID", "assessmentItemID"])['assessmentItemID'].cumcount()
     df['userID_assessmentItemID_experience'] = df['userID_assessmentItemID_experience'].apply(lambda x : 1 if x > 0 else 0)
     return df
@@ -28,11 +29,14 @@ def userID_time_diff_from_last(df):
     def convert_time(s):
         timestamp = time.mktime(datetime.strptime(s, '%Y-%m-%d %H:%M:%S').timetuple())
         return int(timestamp)
-
+    
+    # 초 단위 시간
     df['sec'] = df['Timestamp'].apply(convert_time)
     
+    # userID별 시간 순으로 정렬 + index column 생성
     df = df.sort_values(by=['userID', 'sec']).reset_index(drop=False)
-
+    
+    # userID별 마지막 index 값
     last_idx_group = df.groupby(['userID'])['index'].agg(["max"])
     last_idx_group = last_idx_group.reset_index()
     last_idx_group.columns = ['userID', 'last_index']
@@ -43,6 +47,7 @@ def userID_time_diff_from_last(df):
         period = last_time-x['sec']
         return period
 
+    # userID별 마지막 index의 시간과의 차이 계산
     df["userID_time_diff_from_last"] = df.apply(changed_time, axis=1)
     
     df.drop('sec', axis=1, inplace=True)
