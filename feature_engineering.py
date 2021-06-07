@@ -1,8 +1,61 @@
+import time
+from datetime import datetime
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 tqdm.pandas()
+
+def userID_testid_experience(df):
+    # userID별 시간 순으로 정렬
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    
+    # userID, testID별로 
+    df["userID_testid_experience"] = df.groupby(["userID", "testId"])['testId'].cumcount()
+    df['userID_testid_experience'] = df['userID_testid_experience'].apply(lambda x : 1 if x > 0 else 0)
+    return df
+
+def userID_assessmentItemID_experience(df):
+    # userID별 시간 순으로 정렬
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    # userID별 시간 순으로 정렬    
+    df["userID_assessmentItemID_experience"] = df.groupby(["userID", "assessmentItemID"])['assessmentItemID'].cumcount()
+    df['userID_assessmentItemID_experience'] = df['userID_assessmentItemID_experience'].apply(lambda x : 1 if x > 0 else 0)
+    return df
+
+def userID_time_diff_from_last(df):
+    
+    def convert_time(s):
+        timestamp = time.mktime(datetime.strptime(s, '%Y-%m-%d %H:%M:%S').timetuple())
+        return int(timestamp)
+
+    df['sec'] = df['Timestamp'].apply(convert_time)
+    
+    df = df.sort_values(by=['userID', 'sec']).reset_index(drop=False)
+
+    last_idx_group = df.groupby(['userID'])['index'].agg(["max"])
+    last_idx_group = last_idx_group.reset_index()
+    last_idx_group.columns = ['userID', 'last_index']
+    df = pd.merge(df, last_idx_group, on=["userID"], how="left")
+    
+    def changed_time(x):
+        last_time = df['sec'][x['last_index']]
+        period = last_time-x['sec']
+        return period
+
+    df["userID_time_diff_from_last"] = df.apply(changed_time, axis=1)
+    
+    df.drop('sec', axis=1, inplace=True)
+    df.drop('index', axis=1, inplace=True)
+    return df
+
+def userID_KnowledgeTag_relative(df):
+    # userID, KnowledgeTag별 누적 풀이 수, 정답 수, 정답률
+    df_userID_KnowledgeTag = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    df['userID_KnowledgeTag_total_answer'] = df_userID_KnowledgeTag.groupby("KnowledgeTag")["answerCode"].cumcount()
+    df["userID_KnowledgeTag_correct_answer"] = df_userID_KnowledgeTag.groupby("KnowledgeTag")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    df["userID_KnowledgeTag_acc"] = (df["userID_KnowledgeTag_correct_answer"] / df["userID_KnowledgeTag_total_answer"]).fillna(0)
+    return df
 
 def userID_elapsed_median(df, max_time=600):
     # 약 1m 50s 소요(Progress bar 2개 생김)
