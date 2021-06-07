@@ -26,7 +26,6 @@ def userID_elapsed_median(df, max_time=600):
     df['userID_elapsed_median'] = df.progress_apply(changed_elapsed, axis=1)
     df.drop('userID_elapsed_median_x', axis=1, inplace=True)
     df.drop('userID_elapsed_median_y', axis=1, inplace=True)
-    
     return df
 
 
@@ -51,7 +50,6 @@ def userID_elapsed_median_rolling(df, window=5):
     df['userID_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
     df.drop('userID_elapsed_median_rolling_x', axis=1, inplace=True)
     df.drop('userID_elapsed_median_rolling_y', axis=1, inplace=True)
-    
     return df
 
 
@@ -60,11 +58,11 @@ def question_num(df):
     df["question_num"] = df["assessmentItemID"].apply(lambda x: x[-3:])
     return df
 
+
 def question_class(df):
     # 문제지 안 문제 번호
     df["question_class"] = df["assessmentItemID"].apply(lambda x: x[2])
     return df
-
 
 
 def KnowledgeTag_relative(df):
@@ -94,7 +92,6 @@ def question_class_relative(df):
     df["question_class_correct_answer"] = df.groupby("question_class")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
     df["question_class_total_answer"] = df.groupby("question_class")["answerCode"].cumcount()
     df["question_class_acc"] = (df["question_class_correct_answer"] / df["question_class_total_answer"]).fillna(0)
-    
     return df
 
 
@@ -113,6 +110,7 @@ def userID_question_class_relative(df):
     # userID_question_class 키값 삭제(temp)
     df.drop('userID_question_class', axis=1, inplace=True)
     return df
+
 
 def userID_relative(df):
     # userID별 시간 순으로 정렬
@@ -144,7 +142,6 @@ def userID_acc_rolling(df, window=5):
     df['userID_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
     df.drop('userID_acc_rolling_x', axis=1, inplace=True)
     df.drop('userID_acc_rolling_y', axis=1, inplace=True)
-    
     return df
 
 def user_acc_rolling(df, window=5):
@@ -168,8 +165,8 @@ def user_acc_rolling(df, window=5):
     df['user_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
     df.drop('user_acc_rolling_x', axis=1, inplace=True)
     df.drop('user_acc_rolling_y', axis=1, inplace=True)
-    
     return df
+
 
 def userID_elapsed_median_rolling(df, window=5):
     # userID_elapsed_median이 있어야 이동평균 계산 가능
@@ -192,8 +189,8 @@ def userID_elapsed_median_rolling(df, window=5):
     df['userID_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
     df.drop('userID_elapsed_median_rolling_x', axis=1, inplace=True)
     df.drop('userID_elapsed_median_rolling_y', axis=1, inplace=True)
-    
     return df
+
 
 def assessmentItemID_time_relative(df):
     # 문제별 풀이 시간의 중앙값&평균값
@@ -208,7 +205,6 @@ def assessmentItemID_time_relative(df):
     # 구한 통계량을 각 사용자에게 mapping
     df['assessmentItemID_time_median'] = df_total_agg['assessmentItemID'].map(agg_dict['median'])
     df['assessmentItemID_time_mean'] = df_total_agg['assessmentItemID'].map(agg_dict['mean'])
-    
     return df
 
 
@@ -225,7 +221,6 @@ def userID_time_relative(df):
     # 구한 통계량을 각 사용자에게 mapping
     df['userID_time_median'] = df_total_agg['userID'].map(agg_dict['median'])
     df['userID_time_mean'] = df_total_agg['userID'].map(agg_dict['mean'])
-    
     return df
 
 
