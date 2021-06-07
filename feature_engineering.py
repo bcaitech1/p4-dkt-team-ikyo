@@ -4,7 +4,7 @@ from tqdm import tqdm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 tqdm.pandas()
 
-def user_elapsed_median(df, max_time=600):
+def userID_elapsed_median(df, max_time=600):
     # 약 1m 50s 소요(Progress bar 2개 생김)
     # userID별 시간 순으로 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
@@ -12,45 +12,45 @@ def user_elapsed_median(df, max_time=600):
     # sample별 elapsed time 
     diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().shift(-1)
     elapsed = diff['Timestamp'].progress_apply(lambda x: x.total_seconds() if max_time > x.total_seconds() else None)
-    df['user_elapsed_median'] = elapsed
+    df['userID_elapsed_median'] = elapsed
     
     # userID별 마지막 문제의 풀이 시간(데이터에서 알 수 없는)을
     # userID별 문제 풀이 시간의 "중앙값"으로 반환하기 위한 Aggregation
-    user_median = df.groupby('userID')['user_elapsed_median'].median()
+    user_median = df.groupby('userID')['userID_elapsed_median'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
     # 결측치 중앙값 변환 및 임시 열 삭제
     df = df.fillna('missing')
     def changed_elapsed(data):
-        return data["user_elapsed_median_x"] if data["user_elapsed_median_x"] != 'missing' else data["user_elapsed_median_y"]
-    df['user_elapsed_median'] = df.progress_apply(changed_elapsed, axis=1)
-    df.drop('user_elapsed_median_x', axis=1, inplace=True)
-    df.drop('user_elapsed_median_y', axis=1, inplace=True)
+        return data["userID_elapsed_median_x"] if data["userID_elapsed_median_x"] != 'missing' else data["userID_elapsed_median_y"]
+    df['userID_elapsed_median'] = df.progress_apply(changed_elapsed, axis=1)
+    df.drop('userID_elapsed_median_x', axis=1, inplace=True)
+    df.drop('userID_elapsed_median_y', axis=1, inplace=True)
     
     return df
 
 
-def user_elapsed_median_rolling(df, window=5):
-    # user_elapsed_median이 있어야 이동평균 계산 가능
-    if 'user_elapsed_median' not in df.columns:
-        df = user_elapsed_median(df)
+def userID_elapsed_median_rolling(df, window=5):
+    # userID_elapsed_median이 있어야 이동평균 계산 가능
+    if 'userID_elapsed_median' not in df.columns:
+        df = userID_elapsed_median(df)
     # userID별 시간 순으로 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
     # userID별 문제 풀이 시간의 이동평균
-    df['user_elapsed_median_rolling'] = df.groupby(['userID'])['user_elapsed_median'].rolling(window).mean().values
+    df['userID_elapsed_median_rolling'] = df.groupby(['userID'])['userID_elapsed_median'].rolling(window).mean().values
     # 유저별 window-1만큼 N/A data가 생김(rolling의 특성상 앞데이터에 생김)
-    # 유저별 user_elapsed_median_rolling의 중앙값으로 대체
+    # 유저별 userID_elapsed_median_rolling의 중앙값으로 대체
     def changed_mean_time(data):
-        return data["user_elapsed_median_rolling_x"] if data["user_elapsed_median_rolling_x"] != 'missing' else data["user_elapsed_median_rolling_y"]
-    user_median = df.groupby('userID')['user_elapsed_median_rolling'].median()
+        return data["userID_elapsed_median_rolling_x"] if data["userID_elapsed_median_rolling_x"] != 'missing' else data["userID_elapsed_median_rolling_y"]
+    user_median = df.groupby('userID')['userID_elapsed_median_rolling'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
     # 결측치 중앙값 변환 및 임시 열 삭제
     df = df.fillna('missing')
-    df['user_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
-    df.drop('user_elapsed_median_rolling_x', axis=1, inplace=True)
-    df.drop('user_elapsed_median_rolling_y', axis=1, inplace=True)
+    df['userID_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
+    df.drop('userID_elapsed_median_rolling_x', axis=1, inplace=True)
+    df.drop('userID_elapsed_median_rolling_y', axis=1, inplace=True)
     
     return df
 
@@ -86,7 +86,7 @@ def assessmentItemID_relative(df):
 
 
 def question_class_relative(df):
-    # user_elapsed_median이 있어야 이동평균 계산 가능
+    # userID_elapsed_median이 있어야 이동평균 계산 가능
     if 'question_class' not in df.columns:
         df = question_class(df)
     # Question Class 별 누적 풀이 수, 정답 수, 정답률
@@ -118,32 +118,32 @@ def userID_relative(df):
     # userID별 시간 순으로 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     #user 별 누적 풀이 수, 정답 수, 정답률
-    df["user_correct_answer"] = df.groupby("userID")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
-    df["user_total_answer"] = df.groupby("userID")["answerCode"].cumcount()
-    df["user_acc"] = (df["user_correct_answer"] / df["user_total_answer"]).fillna(0)
+    df["userID_correct_answer"] = df.groupby("userID")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    df["userID_total_answer"] = df.groupby("userID")["answerCode"].cumcount()
+    df["userID_acc"] = (df["userID_correct_answer"] / df["userID_total_answer"]).fillna(0)
     return df
 
 
-def user_acc_rolling(df, window=5):
+def userID_acc_rolling(df, window=5):
     # user_acc 있어야 이동평균 계산 가능
-    if 'user_acc' not in df.columns:
+    if 'userID_acc' not in df.columns:
         df = userID_relative(df)
     # userID별 시간 순으로 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
     # userID별 정답률(user_acc)의 이동 평균
-    df['user_acc_rolling'] = df.groupby(['userID'])['user_acc'].rolling(window).mean().values
+    df['userID_acc_rolling'] = df.groupby(['userID'])['user_acc'].rolling(window).mean().values
     # userID별 window-1만큼 N/A data가 생김(rolling의 특성상 앞데이터에 생김)
     # userID별 user_acc_rolling의 중앙값으로 대체
     def changed_user_acc_rolling(data):
-        return data["user_acc_rolling_x"] if data["user_acc_rolling_x"] != 'missing' else data["user_acc_rolling_y"]
-    user_median = df.groupby('userID')['user_acc_rolling'].median()
+        return data["userID_acc_rolling_x"] if data["userID_acc_rolling_x"] != 'missing' else data["userID_acc_rolling_y"]
+    user_median = df.groupby('userID')['userID_acc_rolling'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     # 결측치 중앙값 변환 및 임시 열 삭제
-    df['user_acc_rolling'] = df['user_acc_rolling'].fillna('missing')
-    df['user_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
-    df.drop('user_acc_rolling_x', axis=1, inplace=True)
-    df.drop('user_acc_rolling_y', axis=1, inplace=True)
+    df['userID_acc_rolling'] = df['userID_acc_rolling'].fillna('missing')
+    df['userID_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
+    df.drop('userID_acc_rolling_x', axis=1, inplace=True)
+    df.drop('userID_acc_rolling_y', axis=1, inplace=True)
     
     return df
 
@@ -171,38 +171,38 @@ def user_acc_rolling(df, window=5):
     
     return df
 
-def user_elapsed_median_rolling(df, window=5):
-    # user_elapsed_median이 있어야 이동평균 계산 가능
-    if 'user_elapsed_median' not in df.columns:
-        df = user_elapsed_median(df)
+def userID_elapsed_median_rolling(df, window=5):
+    # userID_elapsed_median이 있어야 이동평균 계산 가능
+    if 'userID_elapsed_median' not in df.columns:
+        df = userID_elapsed_median(df)
     # userID별 시간 순으로 정렬
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
     
     # userID별 문제 풀이 시간의 이동평균
-    df['user_elapsed_median_rolling'] = df.groupby(['userID'])['user_elapsed_median'].rolling(window).mean().values
+    df['userID_elapsed_median_rolling'] = df.groupby(['userID'])['userID_elapsed_median'].rolling(window).mean().values
     # 유저별 window-1만큼 N/A data가 생김(rolling의 특성상 앞데이터에 생김)
-    # 유저별 user_elapsed_median_rolling의 중앙값으로 대체
+    # 유저별 userID_elapsed_median_rolling의 중앙값으로 대체
     def changed_mean_time(data):
-        return data["user_elapsed_median_rolling_x"] if data["user_elapsed_median_rolling_x"] != 'missing' else data["user_elapsed_median_rolling_y"]
-    user_median = df.groupby('userID')['user_elapsed_median_rolling'].median()
+        return data["userID_elapsed_median_rollingg_x"] if data["userID_elapsed_median_rolling_x"] != 'missing' else data["userID_elapsed_median_rolling_y"]
+    user_median = df.groupby('userID')['userID_elapsed_median_rolling'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
     # 결측치 중앙값 변환 및 임시 열 삭제
     df = df.fillna('missing')
-    df['user_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
-    df.drop('user_elapsed_median_rolling_x', axis=1, inplace=True)
-    df.drop('user_elapsed_median_rolling_y', axis=1, inplace=True)
+    df['userID_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
+    df.drop('userID_elapsed_median_rolling_x', axis=1, inplace=True)
+    df.drop('userID_elapsed_median_rolling_y', axis=1, inplace=True)
     
     return df
 
 def assessmentItemID_time_relative(df):
     # 문제별 풀이 시간의 중앙값&평균값
-    # user_elapsed_median이 있어야 assessmentItemID_time 계산 가능
-    if 'user_elapsed_median' not in df.columns:
-        df = user_elapsed_median(df)
+    # userID_elapsed_median 있어야 assessmentItemID_time 계산 가능
+    if 'userID_elapsed_median' not in df.columns:
+        df = userID_elapsed_median(df)
     # assessmentItemID별 풀이 시간의 중앙값&평균값
     df_total_agg = df.copy()
-    agg_df = df_total_agg.groupby('assessmentItemID')['user_elapsed_median'].agg(['median', 'mean'])
+    agg_df = df_total_agg.groupby('assessmentItemID')['userID_elapsed_median'].agg(['median', 'mean'])
     # mapping을 위해 pandas DataFrame을 dictionary형태로 변환
     agg_dict = agg_df.to_dict()
     # 구한 통계량을 각 사용자에게 mapping
@@ -214,12 +214,12 @@ def assessmentItemID_time_relative(df):
 
 def userID_time_relative(df):
     # 문제별 풀이 시간의 중앙값&평균값
-    # user_elapsed_median이 있어야 assessmentItemID_time 계산 가능
-    if 'user_elapsed_median' not in df.columns:
-        df = user_elapsed_median(df)
+    # userID_elapsed_median 있어야 userID_time_relative 계산 가능
+    if 'userID_elapsed_median' not in df.columns:
+        df = userID_elapsed_median(df)
     # assessmentItemID별 풀이 시간의 중앙값&평균값
     df_total_agg = df.copy()
-    agg_df = df_total_agg.groupby('userID')['user_elapsed_median'].agg(['median', 'mean'])
+    agg_df = df_total_agg.groupby('userID')['userID_time_relative'].agg(['median', 'mean'])
     # mapping을 위해 pandas DataFrame을 dictionary형태로 변환
     agg_dict = agg_df.to_dict()
     # 구한 통계량을 각 사용자에게 mapping
@@ -230,11 +230,11 @@ def userID_time_relative(df):
 
 
 def userID_elapsed_normalize(df):
-    # user_elapsed_median이 있어야 userID_elapsed_normalize 계산 가능
-    if 'user_elapsed_median' not in df.columns:
-        df = user_elapsed_median(df)
+    # userID_elapsed_normalize 있어야 userID_elapsed_normalize 계산 가능
+    if 'userID_elapsed_normalize' not in df.columns:
+        df = userID_elapsed_median(df)
     df_total_norm = df.copy()
-    df['userID_elapsed_normalize'] = df_total_norm.groupby('userID')['user_elapsed_median'].transform(lambda x: (x - x.mean())/x.std())
+    df['userID_elapsed_normalize'] = df_total_norm.groupby('userID')['userID_elapsed_median'].transform(lambda x: (x - x.mean())/x.std())
     return df
 
 
@@ -245,7 +245,7 @@ def lda_feature(df):
         df = KnowledgeTag_relative(df)
     if 'question_class_correct_answer' not in df.columns:
         df = question_class_relative(df)
-    if 'user_question_class_correct_answer' not in df.columns:
+    if 'userID_question_class_correct_answer' not in df.columns:
         df = userID_question_class_relative(df)
     # lda_latent_factor 변수
     lda = LDA(n_components=1)
@@ -262,7 +262,7 @@ def lda_feature(df):
     df['question_class_lda'] = lda.fit_transform(X, y)
     # user_question_class_lda
     X = df[['userID_question_class_correct_answer', 'userID_question_class_total_answer','userID_question_class_acc']]
-    df['user_question_class_lda'] = lda.fit_transform(X, y)
+    df['userID_question_class_lda'] = lda.fit_transform(X, y)
     return df
 
 
