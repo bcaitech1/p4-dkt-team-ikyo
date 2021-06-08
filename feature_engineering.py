@@ -135,6 +135,7 @@ def question_class(df):
 
 
 def KnowledgeTag_relative(df):
+    df.reset_index(drop=True, inplace=True)
     # KnowledgeTag별 누적 풀이 수, 정답 수, 정답률
     df_KnowledgeTag = df.sort_values(by=["KnowledgeTag", "Timestamp"])
     df['KnowledgeTag_total_answer'] = df_KnowledgeTag.groupby("KnowledgeTag")["answerCode"].cumcount()
@@ -144,6 +145,7 @@ def KnowledgeTag_relative(df):
 
 
 def assessmentItemID_relative(df):
+    df.reset_index(drop=True, inplace=True)
     # assessmentItemID별 누적 풀이 수, 정답 수, 정답률
     df_assessmentItemID = df.sort_values(by=["assessmentItemID", "Timestamp"])
     df['assessmentItemID_total_answer'] = df_assessmentItemID.groupby("assessmentItemID")["answerCode"].cumcount()
@@ -280,6 +282,7 @@ def userID_elapsed_normalize(df):
 
 
 def lda_feature(df):
+    df.reset_index(drop=True, inplace=True)
     if 'assessmentItemID_total_answer' not in df.columns:
         df = assessmentItemID_relative(df)
     if 'KnowledgeTag_total_answer' not in df.columns:
