@@ -7,6 +7,34 @@ from tqdm import tqdm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 tqdm.pandas()
 
+def IK_question_acc(df):
+    assessmentItemID_groupby = df.groupby('assessmentItemID').agg({
+        'answercode': 'mean'
+    })
+    
+    df["IK_question_acc"] = assessmentItemID_groupby["answercode"][df["assessmentItemID"]].values
+    return df
+
+def IK_KnowledgeTag_acc(df):
+    KnowledgeTag_groupby = df.groupby('KnowledgeTag').agg({
+        'answercode': 'mean'
+    })
+    
+    df["IK_KnowledgeTag_acc"] = KnowledgeTag_groupby["answercode"][df["KnowledgeTag"]].values
+    
+    return df
+
+def solved_question(df):
+    df["solved_question"] = df.groupby(["userID"]).cumcount()
+    
+    return df
+
+def user_question_class_solved(df):
+    if "question_class" not in df.columns:
+        df = question_class(df)
+        
+    df["user_question_class_solved"] = df.groupby(["userID", "question_class"]).cumcount()
+    return df
 
 def userID_elapsed_cate(df, max_time=600):
     df.sort_values(by=["userID", "Timestamp"], inplace=True)
