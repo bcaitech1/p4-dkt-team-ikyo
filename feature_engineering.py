@@ -6,6 +6,17 @@ from tqdm import tqdm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 tqdm.pandas()
 
+
+def userID_elapsed_cate(df, max_time=600):
+    df.sort_values(by=["userID", "Timestamp"], inplace=True)
+
+    # sample별 elapsed time 
+    diff = df.loc[:, ['userID', 'Timestamp']].groupby('userID').diff().shift(-1)
+    elapsed = diff['Timestamp'].apply(lambda x: int(x.total_seconds() // 10 * 10) if max_time > x.total_seconds() else 1)
+    df['userID_elapsed_cate'] = elapsed
+    
+    return df
+
 def userID_testid_experience(df):
     # userID별 시간 순으로 정렬
     df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
