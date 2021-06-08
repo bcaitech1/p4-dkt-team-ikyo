@@ -98,9 +98,21 @@ def userID_KnowledgeTag_relative(df):
     # userID, KnowledgeTag별 누적 풀이 수, 정답 수, 정답률
     df_userID_KnowledgeTag = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
     df_userID_KnowledgeTag["tmp"] = df_userID_KnowledgeTag[["userID", "KnowledgeTag"]].apply(lambda data: str(data["userID"]) + "_" + str(data["KnowledgeTag"]), axis=1)
-    df['userID_KnowledgeTag_total_answer'] = df_userID_KnowledgeTag.groupby("tmp")["answerCode"].cumcount()
-    df["userID_KnowledgeTag_correct_answer"] = df_userID_KnowledgeTag.groupby("tmp")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    df['userID_KnowledgeTag_total_answer'] = df_userID_KnowledgeTag.groupby("tmp")["answercode"].cumcount()
+    df["userID_KnowledgeTag_correct_answer"] = df_userID_KnowledgeTag.groupby("tmp")["answercode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
     df["userID_KnowledgeTag_acc"] = (df["userID_KnowledgeTag_correct_answer"] / df["userID_KnowledgeTag_total_answer"]).fillna(0)
+    return df
+
+def userID_question_num_relative(df):
+    # question_num이 있어야 계산 가능
+    if 'question_num' not in df.columns:
+        df = question_num(df)
+    # userID, question_num별 누적 풀이 수, 정답 수, 정답률
+    df_userID_question_num = df.sort_values(by=['userID', 'question_num']).reset_index(drop=True)
+    df_userID_question_num["tmp"] = df_userID_question_num[["userID", "question_num"]].apply(lambda data: str(data["userID"]) + "_" + str(data["question_num"]), axis=1)
+    df['userID_question_num_total_answer'] = df_userID_question_num.groupby("tmp")["answercode"].cumcount()
+    df["userID_question_num_correct_answer"] = df_userID_question_num.groupby("tmp")["answercode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    df["userID_question_num_acc"] = (df["userID_question_num_correct_answer"] / df["userID_question_num_total_answer"]).fillna(0)
     return df
 
 def userID_elapsed_median(df, max_time=600):
