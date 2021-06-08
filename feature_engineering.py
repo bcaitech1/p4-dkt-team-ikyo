@@ -1,4 +1,5 @@
 import time
+import random
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -410,3 +411,223 @@ def feature_engineering_sun(df):
     df = pd.merge(df, group_user_question_class, on=["userID_question_class"], how="left")
     
     return df
+
+# ======================================================================================================= #
+
+# ACC 같은 민감한 정보를 Categorical로 바꾸는 함수
+def make_grade(data) :
+    if data < 0.05 : return 0
+    elif data < 0.10 : return 1
+    elif data < 0.15 : return 2
+    elif data < 0.20 : return 3
+    elif data < 0.25 : return 4
+    elif data < 0.30 : return 5
+    elif data < 0.35 : return 6
+    elif data < 0.40 : return 7
+    elif data < 0.45 : return 8
+    elif data < 0.50 : return 9
+    elif data < 0.55 : return 10
+    elif data < 0.60 : return 11
+    elif data < 0.65 : return 12
+    elif data < 0.70 : return 13
+    elif data < 0.75 : return 14
+    elif data < 0.80 : return 15
+    elif data < 0.85 : return 16
+    elif data < 0.90 : return 17
+    elif data < 0.95 : return 18
+    else : return 19
+
+    
+# dataframe을 만들고 기본 세팅하는 함수 (1분 소요)
+def get_df() :
+    dtype = {
+        'userID': 'int16',
+        'answerCode': 'int8',
+        'KnowledgeTag': 'int16'
+    }
+
+    DATA_PATH = '/opt/ml/input/data/train_dataset/train_data.csv'
+    TEST_DATA_PATH = '/opt/ml/input/data/train_dataset/test_data.csv'
+
+    train_df = pd.read_csv(DATA_PATH, dtype=dtype, parse_dates=['Timestamp'])
+    train_df = train_df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    test_df = pd.read_csv(TEST_DATA_PATH, dtype=dtype, parse_dates=['Timestamp'])
+    test_df = test_df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    
+    train_df['is_test'] = False
+    test_df['is_test'] = True
+    
+    df = pd.concat([train_df, test_df], axis=0).reset_index(drop=True)
+    df['next_userID'] = df['userID'].shift(-1).fillna(9999)
+    
+    def answer_masking(df):
+        if df['userID'] != df['next_userID']:
+            return 1 if random.random() < 0.5 else 0
+        else:
+            return df['answerCode']
+    df['masked_answer'] = df.apply(answer_masking, axis=1)
+    
+    return df
+
+
+# 문제의 난이도 Feature
+def get_question_grade(df): 
+    tmp_df = df.groupby('assessmentItemID')['masked_answer'].mean().reset_index()
+    tmp_df.columns = ['assessmentItemID', 'question_grade']
+    tmp_df['question_grade'] = tmp_df['question_grade'].apply(make_grade)
+    df = pd.merge(left=df, right=tmp_df, on=['assessmentItemID'], how='left')
+    return df
+
+
+# 문제의 번호 Feature
+def get_question_order(df) :
+    df['question_order'] = df['assessmentItemID'].apply(lambda x : int(x[-3:]))
+    return df
+
+
+# 문제의 대분류 Feature
+def get_question_large_cate(df) :
+    df['question_large_cate'] = df.apply(lambda x : int(x['testId'][2]), axis=1)
+    return df
+
+
+# User가 해당 대분류의 문제를 몇번 풀었는지 Feature
+def get_userID_cnt_item_in_largeCate(df) :
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    if 'question_large_cate' not in df.columns :
+        df = get_question_large_cate(df)
+    tmp_df = df.copy()
+    tmp_df['tmp'] = tmp_df[["userID", "question_large_cate"]].apply(lambda data: str(data["userID"]) + "_" + str(data["question_large_cate"]), axis=1)
+    df['userID_cnt_item_in_largeCate'] = tmp_df.groupby('tmp')['assessmentItemID'].cumcount()
+    return df
+
+
+# User의 해당 대분류에 대한 정답률 Grade Feature
+def get_userID_answerRate_in_largeCate(df) :
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    if 'question_large_cate' not in df.columns :
+        df = get_question_large_cate(df)
+    tmp_df = df.copy()
+    tmp_df['tmp'] = tmp_df.apply(lambda data: str(data["userID"]) + "_" + str(data["question_large_cate"]), axis=1)
+    tmp_df['answers'] = tmp_df.groupby("tmp")["masked_answer"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    df['userID_answerRate_in_largeCate'] = (tmp_df['answers']/tmp_df['userID_cnt_item_in_largeCate']).fillna(1)
+    df['userID_answerRate_in_largeCate'] = df['userID_answerRate_in_largeCate'].apply(make_grade)
+    return df
+
+
+# User의 해당 Tag에 대한 정답률 Grade Feature
+def get_userID_answerRate_in_tag(df) :
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    tmp_df = df.copy()
+    tmp_df['tmp'] = tmp_df.apply(lambda data: str(data["userID"]) + "_" + str(data["KnowledgeTag"]), axis=1)
+    tmp_df['answers'] = tmp_df.groupby("tmp")["masked_answer"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    tmp_df['userID_cnt_item_in_tag'] = tmp_df.groupby('tmp')['assessmentItemID'].cumcount()
+    df['userID_answerRate_in_tag'] = (tmp_df['answers']/tmp_df['userID_cnt_item_in_tag']).fillna(1)
+    df['userID_answerRate_in_tag'] = df['userID_answerRate_in_tag'].apply(make_grade)
+    return df
+
+
+# User가 해당 문제를 풀어본 경험 Feature
+def get_userID_question_experience(df):
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    df['userID_question_experience'] = df.groupby(["userID", "assessmentItemID"])['assessmentItemID'].cumcount()
+    return df
+
+
+# User가 문제를 순서대로 접근하는지 Feature
+def get_question_solve_order(df) :
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    if 'question_order' not in df.columns :
+        df = get_question_order(df)
+    tmp_df = df.loc[:, ['userID', 'testId', 'question_order']].groupby(['userID', 'testId']).diff().fillna(1)
+    df['question_solve_order'] = tmp_df['question_order'].apply(lambda x : 1 if x == 1 else 0)
+    return df
+
+
+# 문제를 푸는데 걸리는 시간 Feature (UserID와 TestID 기준으로 구하고, Max 및 nan 값은 125로 사용)
+def get_userID_elapsed_by_test_125(df) :
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    diff = df.loc[:, ['userID', 'testId', 'Timestamp']].groupby(['userID','testId']).diff().shift(-1).fillna(pd.Timedelta(seconds=0))
+    diff = diff.fillna(pd.Timedelta(seconds=0))
+    diff = diff['Timestamp'].apply(lambda x: x.total_seconds())
+    df['elapsed_solving'] = diff
+    df['elapsed_solving'] = df['elapsed_solving'].apply(lambda x : 125 if x == 0 or x > 125 else x)
+    return df
+
+
+# User가 문제를 풀때 걸리는 시간의 중앙값 Feature
+def get_userID_elapsed_median(df) :
+    if 'elapsed_solving' not in df.columns :
+        df = get_userID_elapsed_by_test_125(df)
+    tmp_df = df.groupby('userID')['elapsed_solving'].median()
+    tmp_df.name = 'userID_elapsed_median'
+    tmp_df = tmp_df.reset_index()
+    df = pd.merge(left=df, right=tmp_df, on='userID', how='left')
+    return df
+
+
+# 문제를 맞춘 사람과 못맞춘 사람이 걸리는 시간의 중앙값 Feature
+def get_question_elapsed_median(df) :
+    tmp_df = df.groupby(['assessmentItemID','masked_answer']).agg({'elapsed_solving':'median'})
+    tmp_df = tmp_df.reset_index()
+    tmp_df_correct = tmp_df[tmp_df['masked_answer']==1]
+    tmp_df_incorrect = tmp_df[tmp_df['masked_answer']==0]
+    tmp_df_correct.columns = ['assessmentItemID', 'masked_answer', 'question_correct_elapsed_median']
+    tmp_df_incorrect.columns = ['assessmentItemID', 'masked_answer', 'question_incorrect_elapsed_median']
+    tmp_df_correct = tmp_df_correct.drop('masked_answer', axis=1)
+    tmp_df_incorrect = tmp_df_incorrect.drop('masked_answer', axis=1)
+    df = pd.merge(left=df, right=tmp_df_correct, on=['assessmentItemID'], how='left')
+    df = pd.merge(left=df, right=tmp_df_incorrect, on=['assessmentItemID'], how='left')
+    return df
+
+
+# 문제를 접근한 날짜 Feature (월단위)
+def get_question_solve_month(df) :
+    df["question_solve_month"] = df["Timestamp"].apply(lambda x: x.month)
+    return df
+
+
+# User가 이전에 몇 문제를 풀었는지 Feature
+def get_userID_cnt_items(df) :
+    df = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
+    df['userID_cnt_items'] = df.groupby("userID")["assessmentItemID"].cumcount()
+    return df
+
+
+# User가 이전에 몇개의 시험지를 풀었는지 Feature
+def get_userID_cnt_tests(df) :
+    tmp_df = df[['userID','testId']]
+    tmp_df = tmp_df.drop_duplicates()
+    tmp_df['userID_cnt_tests'] = tmp_df.groupby('userID')['testId'].cumcount()
+    df = pd.merge(left=df, right=tmp_df, on=['userID','testId'], how='left')
+    return df
+
+
+# User가 이전에 몇개의 Tag를 풀었는지 Feature
+def get_userID_cnt_tags(df) :
+    tmp_df = df[['userID','KnowledgeTag']]
+    tmp_df = tmp_df.drop_duplicates()
+    tmp_df['userID_cnt_tags'] = tmp_df.groupby('userID')['KnowledgeTag'].cumcount()
+    df = pd.merge(left=df, right=tmp_df, on=['userID','KnowledgeTag'], how='left')
+    return df
+
+
+# Dataframe부터, 전체 Feature Engineering까지 수행되는 Code
+def get_all() :
+	df = get_df()
+	df = get_question_grade(df)
+	df = get_question_order(df)
+	df = get_question_large_cate(df)
+	df = get_userID_cnt_item_in_largeCate(df)
+	df = get_userID_answerRate_in_largeCate(df)
+	df = get_userID_answerRate_in_tag(df)
+	df = get_userID_question_experience(df)
+	df = get_question_solve_order(df)
+	df = get_userID_elapsed_by_test_125(df)
+	df = get_userID_elapsed_median(df)
+	df = get_question_elapsed_median(df)
+	df = get_question_solve_month(df)
+	df = get_userID_cnt_items(df)
+	df = get_userID_cnt_tests(df)
+	df = get_userID_cnt_tags(df)
+	return df
