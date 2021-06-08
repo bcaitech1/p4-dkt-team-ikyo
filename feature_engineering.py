@@ -90,7 +90,7 @@ def userID_elapsed_median(df, max_time=600):
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
     # 결측치 중앙값 변환 및 임시 열 삭제
-    df = df.fillna('missing')
+    df["userID_elapsed_median_x"] = df["userID_elapsed_median_x"].fillna('missing')
     def changed_elapsed(data):
         return data["userID_elapsed_median_x"] if data["userID_elapsed_median_x"] != 'missing' else data["userID_elapsed_median_y"]
     df['userID_elapsed_median'] = df.progress_apply(changed_elapsed, axis=1)
@@ -116,7 +116,7 @@ def userID_elapsed_median_rolling(df, window=5):
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
     # 결측치 중앙값 변환 및 임시 열 삭제
-    df = df.fillna('missing')
+    df['userID_elapsed_median_rolling_x'] = df['userID_elapsed_median_rolling_x'].fillna('missing')
     df['userID_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
     df.drop('userID_elapsed_median_rolling_x', axis=1, inplace=True)
     df.drop('userID_elapsed_median_rolling_y', axis=1, inplace=True)
@@ -210,7 +210,7 @@ def userID_acc_rolling(df, window=5):
     user_median = df.groupby('userID')['userID_acc_rolling'].median()
     df = pd.merge(df, user_median, on=["userID"], how="left")
     # 결측치 중앙값 변환 및 임시 열 삭제
-    df = df.fillna('missing')
+    df['userID_acc_rolling_x'] = df['userID_acc_rolling_x'].fillna('missing')
     df['userID_acc_rolling'] = df.progress_apply(changed_user_acc_rolling, axis=1)
     df.drop('userID_acc_rolling_x', axis=1, inplace=True)
     df.drop('userID_acc_rolling_y', axis=1, inplace=True)
@@ -234,7 +234,7 @@ def userID_elapsed_median_rolling(df, window=5):
     df = pd.merge(df, user_median, on=["userID"], how="left")
     
     # 결측치 중앙값 변환 및 임시 열 삭제
-    df = df.fillna('missing')
+    df['userID_elapsed_median_rolling_x'] = df['userID_elapsed_median_rolling_x'].fillna('missing')
     df['userID_elapsed_median_rolling'] = df.progress_apply(changed_mean_time, axis=1)
     df.drop('userID_elapsed_median_rolling_x', axis=1, inplace=True)
     df.drop('userID_elapsed_median_rolling_y', axis=1, inplace=True)
