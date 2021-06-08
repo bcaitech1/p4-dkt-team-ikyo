@@ -68,8 +68,9 @@ def userID_time_diff_from_last(df):
 def userID_KnowledgeTag_relative(df):
     # userID, KnowledgeTag별 누적 풀이 수, 정답 수, 정답률
     df_userID_KnowledgeTag = df.sort_values(by=['userID', 'Timestamp']).reset_index(drop=True)
-    df['userID_KnowledgeTag_total_answer'] = df_userID_KnowledgeTag.groupby("KnowledgeTag")["answerCode"].cumcount()
-    df["userID_KnowledgeTag_correct_answer"] = df_userID_KnowledgeTag.groupby("KnowledgeTag")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
+    df_userID_KnowledgeTag["tmp"] = df_userID_KnowledgeTag[["userID", "KnowledgeTag"]].apply(lambda data: str(data["userID"]) + "_" + str(data["KnowledgeTag"]), axis=1)
+    df['userID_KnowledgeTag_total_answer'] = df_userID_KnowledgeTag.groupby("tmp")["answerCode"].cumcount()
+    df["userID_KnowledgeTag_correct_answer"] = df_userID_KnowledgeTag.groupby("tmp")["answerCode"].transform(lambda x: x.cumsum().shift(1)).fillna(0)
     df["userID_KnowledgeTag_acc"] = (df["userID_KnowledgeTag_correct_answer"] / df["userID_KnowledgeTag_total_answer"]).fillna(0)
     return df
 
