@@ -45,7 +45,7 @@ DKT는 Deep Knowledge Tracing의 약자로 우리의 "지식 상태"를 추적�
 
 ---
 
-## `🗂 Directory`
+## 🗂 Directory
 
 ```
 p4-dkt-team-ikyo
@@ -59,13 +59,13 @@ p4-dkt-team-ikyo
 │   ├── Machine Learning
 │   │   ├── .py
 │   │   └── .py
-│   └── Deep Learning
+│   ├── Deep Learning
 │   │   ├── .py
 │   │   └── .py
-│   ├── script
-│   │   ├── DL_train.sh
-│   │   ├── DL_inference.sh
-│   │   ├── ML_train.sh
-│   │   └── ML_inference.sh
+│   └── script
+│       ├── DL_train.sh
+│       ├── DL_inference.sh
+│       ├── ML_train.sh
+│       └── ML_inference.sh
 └── requirements.txt
 ```
