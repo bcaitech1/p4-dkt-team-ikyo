@@ -51,17 +51,18 @@ DKT는 Deep Knowledge Tracing의 약자로 우리의 "지식 상태"를 추적�
 p4-dkt-team-ikyo
 ├── code
 │   ├── EDA
-│   │   ├── .py
-│   │   └── .py
+│   │   └── TeamIkyo_EDA.ipynb
 │   ├── Feature Engineering
-│   │   ├── .py
-│   │   └── .py
-│   ├── Machine Learning
-│   │   ├── .py
-│   │   └── .py
+│   │   └── feature_engineering.py
+│   ├── LGBM
+│   │   ├── lgbm_baseline.ipynb
+│   │   └── lgbm_function.py
 │   ├── Deep Learning
 │   │   ├── .py
 │   │   └── .py
+│   ├── Ensemble
+│   │   ├── power_ensemble.ipynb
+│   │   └── stacking.ipynb
 │   └── script
 │       ├── DL_train.sh
 │       ├── DL_inference.sh
