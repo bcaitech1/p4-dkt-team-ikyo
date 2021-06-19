@@ -1,6 +1,6 @@
 # 📖 Stage 4 - DKT (Deep Knowledge Tracing) ✏️
 
-> Hosted by [2021 Boostcamp AI Tech](https://boostcamp.connect.or.kr/)
+> More explanations of our codes are in 🔎[TEAM-IKYO's WIKI](https://github.com/bcaitech1/p4-dkt-team-ikyo/wiki)
 
 <p align="center">
   <img width="250" src="https://user-images.githubusercontent.com/59340911/119260977-29b29480-bc10-11eb-8543-cf7ef73ddcd4.png">
